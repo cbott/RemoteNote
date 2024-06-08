@@ -6,17 +6,21 @@
 
 #include "secrets.h"
 
+// Display pins
 #define EPD_DC 10
 #define EPD_CS 9
 #define EPD_BUSY -1 // can set to -1 to not use a pin (will wait a fixed delay)
 #define SRAM_CS 6
 #define EPD_RESET -1  // can set to -1 and share with microcontroller Reset!
 #define EPD_SPI &SPI // primary SPI
+
 // Wifi chip pins
 #define ATWINC_CS 8
 #define ATWINC_IRQ 7
 #define ATWINC_RST 4
 #define ATWINC_EN 2
+
+#define LED_PIN 13
 
 // 2.9" Tricolor Featherwing or Breakout with IL0373 chipset
 ThinkInk_290_Tricolor_Z10 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY, EPD_SPI);
@@ -24,9 +28,8 @@ ThinkInk_290_Tricolor_Z10 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY, 
 // Sensitive data from "secrets.h"
 char ssid[] = SECRET_SSID;    // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
-// Google Sheets API URL
+// Google Sheets URL
 String url = String("/spreadsheets/d/") + SHEET_ID + "/edit";
-
 char server[] = "docs.google.com";
 
 // Initialize the WiFi client library
@@ -36,16 +39,21 @@ void setup() {
   //Configure pins for Adafruit ATWINC1500 Feather
   WiFi.setPins(ATWINC_CS, ATWINC_IRQ, ATWINC_RST, ATWINC_EN);
 
-  // Initialize serial and wait for port to open:
   Serial.begin(115200);
 
   Serial.println("Initializing Display");
   display.begin(THINKINK_TRICOLOR);
+
+  // Turn off the on-board LED to save power
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 }
 
 void loop() {
+  // Connect to the WiFi network
   init_wifi();
 
+  // Pull the message from Sheets
   String response = get_line_from_spreadsheet();
 
   if(!response.length()){
@@ -56,18 +64,33 @@ void loop() {
     // Clear
     display.clearBuffer();
 
-    // Set white background
-    display.fillRect(0, 0, display.width(), display.height(), EPD_WHITE);
+    // Set background (default: white)
+    uint16_t bg_color = EPD_WHITE;
+    if(response.startsWith("[BG R]")){
+      bg_color = EPD_RED;
+      response.remove(0, 6);
+    } else if(response.startsWith("[BG B]")){
+      bg_color = EPD_BLACK;
+      response.remove(0, 6);
+    }
+    display.fillRect(0, 0, display.width(), display.height(), bg_color);
 
     // Configure text
-    display.setTextSize(2);
+    display.setTextSize(3);
     // X position, Y Position measured from top left corner
-    display.setCursor(10, 5);
-    display.setTextColor(EPD_BLACK);
-    display.print("Your Message: ");
+    display.setCursor(0, 5);
 
-    display.setCursor(10, 25);
-    display.setTextColor(EPD_RED);
+    // Set text color (default: black)
+    if(response.startsWith("[R]")){
+      display.setTextColor(EPD_RED);
+      response.remove(0, 3);
+    } else if(response.startsWith("[W]")){
+      display.setTextColor(EPD_WHITE);
+      response.remove(0, 3);
+    } else {
+      display.setTextColor(EPD_BLACK);
+    }
+
     display.print(response);
 
     // Display, sleep=true to power down after
@@ -117,7 +140,7 @@ String get_line_from_spreadsheet(){
         break;
       }
 
-      result += next_line + "\n ";
+      result += next_line + "\n";
     }
 
     // Disconnect from the server

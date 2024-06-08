@@ -1,6 +1,6 @@
 # RemoteNote
 An E-Paper display that displays messages from the internet
-
+![RemoteNote project demo](demo.png)
 
 ## Parts
 | Part | Product Name |
@@ -17,7 +17,6 @@ An E-Paper display that displays messages from the internet
     - For a quick test you can upload "eink_count_example" to confirm the display is working
 1. Flash the SSL certificates for `docs.google.com` to your board
     - Once again, [this](https://learn.adafruit.com/adafruit-feather-m0-wifi-atwinc1500/updating-ssl-certificates) tutorial
-need Arduino 1.8 IDE for this for some reason
     - Make sure to add the `setPins()` line to the WiFi101 "FirmwareUpdater" example sketch
     - I had to use an older 1.8.x version of the Arduino IDE to get the updater tool to work
 1. Create a Google Sheets document and enable link sharing
@@ -48,4 +47,6 @@ CAD models for boards provided by [Adafruit_CAD_Parts](https://github.com/adafru
 
 
 ## To Do
-Next up is power management improvements. Will try to make use of the "Arduino Low Power" library for more efficient sleeps
+- Power management improvements i.e. "Arduino Low Power" library for more efficient sleeps
+- More configuration options such as text size, position
+- Cleanup, including eliminating serial prints and better error handling
