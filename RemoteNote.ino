@@ -24,10 +24,16 @@
 #define BUTTON_A_PIN 11
 
 // Refresh time should never be less than 3 minutes due to display limitations
-#define REFRESH_TIME_S (60*3)
+#define REFRESH_TIME_S (60*60)
 volatile bool do_deep_sleep = true;
 
+// Serial Baud rate
 #define BAUD 115200
+
+// Times to attempt wifi connection before displaying error message
+#define MAX_CONNECTION_RETRIES 5
+// Delay between connection attempts
+#define CONNECTION_RETRY_DELAY_MS = 1000;
 
 // 2.9" Tricolor Featherwing or Breakout with IL0373 chipset
 ThinkInk_290_Tricolor_Z10 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY, EPD_SPI);
@@ -62,11 +68,15 @@ void setup() {
 }
 
 void loop() {
-  // Connect to the WiFi network
-  init_wifi();
+  String response;
 
-  // Pull the message from Sheets
-  String response = get_line_from_spreadsheet();
+  // Connect to the WiFi network
+  if(init_wifi()){
+    // Pull the message from Sheets
+    response = get_line_from_spreadsheet();
+  } else {
+    response = "[BG R][W]   WiFi Error   ";
+  }
 
   if(!response.length()){
     Serial.println("Failed to retrieve message");
@@ -184,15 +194,27 @@ bool init_wifi(){
   }
 
   // Attempt to connect to WiFi network
-  while (WiFi.begin(ssid, pass) != WL_CONNECTED) {
+  int n_attempts = 0;
+  for(int n_attempts=1; n_attempts<=MAX_CONNECTION_RETRIES; ++n_attempts) {
     Serial.print("Attempting to connect to SSID: ");
-    Serial.println(ssid);
-    delay(10000);
+    Serial.print(ssid);
+    Serial.print(" (");
+    Serial.print(n_attempts);
+    Serial.print("/");
+    Serial.print(MAX_CONNECTION_RETRIES);
+    Serial.println(")");
+
+    if(WiFi.begin(ssid, pass) == WL_CONNECTED){
+      Serial.println("Connected to WiFi");
+      printWiFiStatus();
+      return true;
+    }
+
+    delay(CONNECTION_RETRY_DELAY_MS);
   }
 
-  Serial.println("Connected to WiFi");
-  printWiFiStatus();
-  return true;
+  Serial.println("Failed to connect");
+  return false;
 }
 
 void printWiFiStatus() {
