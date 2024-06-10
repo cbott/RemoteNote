@@ -21,6 +21,13 @@
 #define ATWINC_EN 2
 
 #define LED_PIN 13
+#define BUTTON_A_PIN 11
+
+// Refresh time should never be less than 3 minutes due to display limitations
+#define REFRESH_TIME_S (60*3)
+volatile bool do_deep_sleep = true;
+
+#define BAUD 115200
 
 // 2.9" Tricolor Featherwing or Breakout with IL0373 chipset
 ThinkInk_290_Tricolor_Z10 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY, EPD_SPI);
@@ -39,7 +46,7 @@ void setup() {
   //Configure pins for Adafruit ATWINC1500 Feather
   WiFi.setPins(ATWINC_CS, ATWINC_IRQ, ATWINC_RST, ATWINC_EN);
 
-  Serial.begin(115200);
+  Serial.begin(BAUD);
 
   Serial.println("Initializing Display");
   display.begin(THINKINK_TRICOLOR);
@@ -47,6 +54,11 @@ void setup() {
   // Turn off the on-board LED to save power
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
+
+  // Set up an interrupt to allow disabling low power sleep
+  // as this sometimes can interfere with flashing
+  pinMode(BUTTON_A_PIN, INPUT_PULLUP);
+  LowPower.attachInterruptWakeup(BUTTON_A_PIN, disable_deep_sleep, CHANGE);
 }
 
 void loop() {
@@ -100,9 +112,23 @@ void loop() {
   // Disable WiFi chip until next time
   WiFi.end();
 
+  // For some reason low power sleeps were being skipped without
+  // a small delay here. 5s arbitrary, <1s likely works fine.
+  delay(5000);
+
   // Wait for a while before next request
-  Serial.println("Waiting for next call");
-  delay(180000);
+  if(do_deep_sleep){
+    Serial.println("Starting low power sleep");
+    // Disable serial comms for power savings
+    Serial.end();
+    LowPower.sleep(REFRESH_TIME_S * 1000);
+    Serial.begin(BAUD);
+    delay(1000); // Allow time to re-establish Serial comms
+  } else {
+    Serial.println("Starting normal sleep");
+    delay(REFRESH_TIME_S * 1000);
+  }
+  Serial.println("Sleep finished");
 }
 
 String get_line_from_spreadsheet(){
@@ -184,4 +210,11 @@ void printWiFiStatus() {
   Serial.print("Signal strength (RSSI):");
   Serial.print(rssi);
   Serial.println(" dBm");
+}
+
+void disable_deep_sleep(){
+  // Called as an interrupt
+  do_deep_sleep = false;
+  // Set the LED on to indicate we are now in a high power state
+  digitalWrite(LED_PIN, HIGH);
 }
