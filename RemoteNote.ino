@@ -8,7 +8,9 @@
 
 // Display pins
 #define EPD_DC 10
-#define EPD_CS 9
+// ONLY valid if you have modified your FeatherWing to cut the ECS and SDCS jumpers
+// and bridged ECS to pin 5, otherwise set EPD_CS=9 and voltage sense will not work
+#define EPD_CS 5
 #define EPD_BUSY -1 // can set to -1 to not use a pin (will wait a fixed delay)
 #define SRAM_CS 6
 #define EPD_RESET -1  // can set to -1 and share with microcontroller Reset!
@@ -23,6 +25,11 @@
 #define LED_PIN 13
 #define BUTTON_A_PIN 11
 
+// Battery voltage measurements
+#define VBATPIN A7
+#define MIN_BATT_V 3.0
+#define MAX_BATT_V 4.2
+
 // Refresh time should never be less than 3 minutes due to display limitations
 #define REFRESH_TIME_S (60*60)
 volatile bool do_deep_sleep = true;
@@ -33,7 +40,7 @@ volatile bool do_deep_sleep = true;
 // Times to attempt wifi connection before displaying error message
 #define MAX_CONNECTION_RETRIES 5
 // Delay between connection attempts
-#define CONNECTION_RETRY_DELAY_MS = 1000;
+#define CONNECTION_RETRY_DELAY_MS 1000
 
 // 2.9" Tricolor Featherwing or Breakout with IL0373 chipset
 ThinkInk_290_Tricolor_Z10 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY, EPD_SPI);
@@ -47,6 +54,7 @@ char server[] = "docs.google.com";
 
 // Initialize the WiFi client library
 WiFiSSLClient client;
+
 
 void setup() {
   //Configure pins for Adafruit ATWINC1500 Feather
@@ -67,6 +75,7 @@ void setup() {
   LowPower.attachInterruptWakeup(BUTTON_A_PIN, disable_deep_sleep, CHANGE);
 }
 
+
 void loop() {
   String response;
 
@@ -80,44 +89,10 @@ void loop() {
 
   if(!response.length()){
     Serial.println("Failed to retrieve message");
-  } else {
-    Serial.println("Displaying message...");
-
-    // Clear
-    display.clearBuffer();
-
-    // Set background (default: white)
-    uint16_t bg_color = EPD_WHITE;
-    if(response.startsWith("[BG R]")){
-      bg_color = EPD_RED;
-      response.remove(0, 6);
-    } else if(response.startsWith("[BG B]")){
-      bg_color = EPD_BLACK;
-      response.remove(0, 6);
-    }
-    display.fillRect(0, 0, display.width(), display.height(), bg_color);
-
-    // Configure text
-    display.setTextSize(3);
-    // X position, Y Position measured from top left corner
-    display.setCursor(0, 5);
-
-    // Set text color (default: black)
-    if(response.startsWith("[R]")){
-      display.setTextColor(EPD_RED);
-      response.remove(0, 3);
-    } else if(response.startsWith("[W]")){
-      display.setTextColor(EPD_WHITE);
-      response.remove(0, 3);
-    } else {
-      display.setTextColor(EPD_BLACK);
-    }
-
-    display.print(response);
-
-    // Display, sleep=true to power down after
-    display.display(true);
+    response = "[BG R][W] Message Error  ";
   }
+
+  parse_and_display_message(response);
 
   // Disable WiFi chip until next time
   WiFi.end();
@@ -140,6 +115,54 @@ void loop() {
   }
   Serial.println("Sleep finished");
 }
+
+
+void parse_and_display_message(String msg){
+  Serial.println("Displaying message...");
+
+  // Clear
+  display.clearBuffer();
+
+  // Set background (default: white) and battery bar (default: red)
+  uint16_t bg_color = EPD_WHITE;
+  uint16_t batt_color = EPD_RED;
+  if(msg.startsWith("[BG R]")){
+    bg_color = EPD_RED;
+    batt_color = EPD_WHITE;
+    msg.remove(0, 6);
+  } else if(msg.startsWith("[BG B]")){
+    bg_color = EPD_BLACK;
+    msg.remove(0, 6);
+  }
+  display.fillRect(0, 0, display.width(), display.height(), bg_color);
+
+  // Configure text
+  display.setTextSize(3);
+  // X position, Y Position measured from top left corner
+  display.setCursor(0, 5);
+
+  // Set text color (default: black)
+  if(msg.startsWith("[R]")){
+    display.setTextColor(EPD_RED);
+    msg.remove(0, 3);
+  } else if(msg.startsWith("[W]")){
+    display.setTextColor(EPD_WHITE);
+    msg.remove(0, 3);
+  } else {
+    display.setTextColor(EPD_BLACK);
+  }
+
+  display.print(msg);
+
+  // Display battery indicator at the bottom of the screen
+  float vbatt = get_battery_voltage();
+  Serial.print("VBat: " ); Serial.println(vbatt);
+  display.fillRect(0, display.height() - 2, battery_bar_width(vbatt), 2, batt_color);
+
+  // Display, sleep=true to power down after
+  display.display(true);
+}
+
 
 String get_line_from_spreadsheet(){
   String result;
@@ -185,6 +208,7 @@ String get_line_from_spreadsheet(){
 
   return result;
 }
+
 
 bool init_wifi(){
   // Check for the presence of the shield
@@ -234,9 +258,26 @@ void printWiFiStatus() {
   Serial.println(" dBm");
 }
 
+
 void disable_deep_sleep(){
   // Called as an interrupt
   do_deep_sleep = false;
   // Set the LED on to indicate we are now in a high power state
   digitalWrite(LED_PIN, HIGH);
+}
+
+
+float get_battery_voltage(){
+  float measuredvbat = analogRead(VBATPIN);
+  measuredvbat *= 2;    // Correct for /2 voltage divider
+  measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
+  measuredvbat /= 1024; // convert to voltage
+  return measuredvbat;
+}
+
+
+int16_t battery_bar_width(float vbatt){
+  // Returns a width for the battery indicator given present voltage (battery_percentage * total_display_width)
+  float batt_pct = constrain((vbatt-MIN_BATT_V) / (MAX_BATT_V - MIN_BATT_V), 0.0, 1.0);
+  return int16_t(batt_pct * (display.width()));
 }
