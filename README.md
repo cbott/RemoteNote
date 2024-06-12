@@ -8,6 +8,8 @@ An E-Paper display that displays messages from the internet
 | E-Paper Display | [Adafruit 2.9" Tri-Color eInk / ePaper Display FeatherWing - IL0373 - Red Black White](https://www.adafruit.com/product/4778) |
 | Controller | [Adafruit Feather M0 WiFi](https://www.adafruit.com/product/3044) |
 | Battery (optional) | [Adafruit LiPo](https://www.adafruit.com/product/3898) or similar with JST connector |
+| Enclosure | 3D printed, see `Mechanicals` section |
+| Fasteners (4x) | M2.5x3mm such as [McMaster PN 92095A113](https://www.mcmaster.com/92095A113/) |
 
 
 ## Setup

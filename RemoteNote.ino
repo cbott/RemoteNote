@@ -31,7 +31,7 @@
 #define MAX_BATT_V 4.2
 
 // Refresh time should never be less than 3 minutes due to display limitations
-#define REFRESH_TIME_S (60*60)
+#define REFRESH_TIME_S (60*60*3)
 volatile bool do_deep_sleep = true;
 
 // Serial Baud rate
@@ -40,7 +40,7 @@ volatile bool do_deep_sleep = true;
 // Times to attempt wifi connection before displaying error message
 #define MAX_CONNECTION_RETRIES 5
 // Delay between connection attempts
-#define CONNECTION_RETRY_DELAY_MS 1000
+#define CONNECTION_RETRY_DELAY_MS 5000
 
 // 2.9" Tricolor Featherwing or Breakout with IL0373 chipset
 ThinkInk_290_Tricolor_Z10 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY, EPD_SPI);
@@ -87,15 +87,16 @@ void loop() {
     response = "[BG R][W]   WiFi Error   ";
   }
 
+  // Disable WiFi chip until next time for power saving
+  WiFi.end();
+
   if(!response.length()){
     Serial.println("Failed to retrieve message");
     response = "[BG R][W] Message Error  ";
   }
 
+  // Note: had some minor display issues if we called this before Wifi.end()
   parse_and_display_message(response);
-
-  // Disable WiFi chip until next time
-  WiFi.end();
 
   // For some reason low power sleeps were being skipped without
   // a small delay here. 5s arbitrary, <1s likely works fine.
