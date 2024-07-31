@@ -45,6 +45,15 @@ View the enclosure CAD model on [OnShape](https://cad.onshape.com/documents/76b6
 
 CAD models for boards provided by [Adafruit_CAD_Parts](https://github.com/adafruit/Adafruit_CAD_Parts) repository
 
+## Message Formatting
+By default, messages will be displayed in black text on a white background.
+
+Messages may be prefixed with the string `[BG R]` or `[BG B]` to set the background color to be Red or Black. Following that with `[R]` or `[W]` will set the text color to either Red or White. These must be the first characters in the spreadsheet and will apply to the whole message.
+- Example: `[BG B][W]Hello World` will display the message "Hello World" in white text on a black background.
+- Example: `[R]Hello World` will display the message "Hello World" in red text on a white background.
+
+The Adafruit display uses [CP437 encoding](https://en.wikipedia.org/wiki/Code_page_437) which, combined with HTTP responses modifying some formatting, can make it difficult to display special characters. Characters will need to be valid in both UTF8 and CP437 to make this work. Characters such as "<" will not display properly due to being escaped in the HTTP response.
+
 
 ## Notes
 - RemoteNote is a Minimum Viable Product. There are probably many other projects which do the same thing but I have set this up to be as easy to get started with as possible - no wiring, API keys, or fancy stuff.
