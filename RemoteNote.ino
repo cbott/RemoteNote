@@ -189,23 +189,26 @@ String get_line_from_spreadsheet(){
 
     // Trash the next 3 rows as these are the HTML bits
     for(int i=0; i<3; ++i){
+      Serial.print("Clearing header row "); Serial.println(i);
       client.readStringUntil('\n');
     }
 
     // Read rows of the spreadsheet up until the #END marker
+    Serial.println("Pulling Message");
     while (client.available()) {
-      String next_line = client.readStringUntil('\n');
+      char c = client.read();
+      result += c;
+      Serial.write(c);
 
-      if(next_line.startsWith("#END")){
+      if(result.length() > 100 || result.endsWith("#END")){
         break;
       }
-
-      result += next_line + "\n";
     }
 
     // Disconnect from the server
     client.stop();
   }
+  Serial.println();
 
   return result;
 }
