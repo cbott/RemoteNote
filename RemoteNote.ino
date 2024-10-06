@@ -48,9 +48,9 @@ ThinkInk_290_Tricolor_Z10 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY, 
 // Sensitive data from "secrets.h"
 char ssid[] = SECRET_SSID;    // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
-// Google Sheets URL
-String url = String("/spreadsheets/d/") + SHEET_ID + "/edit";
-char server[] = "docs.google.com";
+// Message server URL
+String url = String("/") + SECRET_PAGE_ID;
+char server[] = "gist.githubusercontent.com";
 
 // Initialize the WiFi client library
 WiFiSSLClient client;
@@ -81,8 +81,8 @@ void loop() {
 
   // Connect to the WiFi network
   if(init_wifi()){
-    // Pull the message from Sheets
-    response = get_line_from_spreadsheet();
+    // Pull the message from the internet
+    response = get_text_from_server();
   } else {
     response = "[BG R][W]   WiFi Error   ";
   }
@@ -165,40 +165,41 @@ void parse_and_display_message(String msg){
 }
 
 
-String get_line_from_spreadsheet(){
+// Returns the full message text from the message server
+String get_text_from_server(){
   String result;
 
-  // Connect to the Google Sheets API server
+  // Connect to the message server
   if(client.connect(server, 443)) {
     Serial.println("Connected to server");
 
     // Make a HTTP GET request
     client.println(String("GET ") + url + " HTTP/1.1");
-    client.println("Host: docs.google.com");
+    client.print("Host: ");
+    client.println(server);
     client.println("Connection: close");
     client.println();
 
     // Wait for a response
     while (client.connected()) {
       String line = client.readStringUntil('\n');
+      Serial.print("Header: ");
+      Serial.println(line);
       if (line == "\r") {
         Serial.println("Headers received");
         break;
       }
     }
 
-    // Trash the next 3 rows as these are the HTML bits
-    for(int i=0; i<3; ++i){
-      Serial.print("Clearing header row "); Serial.println(i);
-      client.readStringUntil('\n');
-    }
-
-    // Read rows of the spreadsheet up until the #END marker
+    // Read all characters from source, up to 100 total or until the #END marker
     Serial.println("Pulling Message");
+    delay(10);
+
     while (client.available()) {
       char c = client.read();
       result += c;
       Serial.write(c);
+      delay(1);
 
       if(result.length() > 100 || result.endsWith("#END")){
         break;

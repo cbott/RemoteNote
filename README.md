@@ -17,7 +17,7 @@ An E-Paper display that displays messages from the internet
     - Complete the steps through the WiFi examples
 1. Add the Adafruit EPD library per https://learn.adafruit.com/adafruit-2-9-eink-display-breakouts-and-featherwings/arduino-setup
     - For a quick test you can upload "eink_count_example" to confirm the display is working
-1. Flash the SSL certificates for `docs.google.com` to your board
+1. Flash the SSL certificates for `gist.githubusercontent.com` to your board
     - Once again, [this](https://learn.adafruit.com/adafruit-feather-m0-wifi-atwinc1500/updating-ssl-certificates) tutorial
     - Make sure to add the `setPins()` line to the WiFi101 "FirmwareUpdater" example sketch
     - I had to use an older 1.8.x version of the Arduino IDE to get the updater tool to work
@@ -29,10 +29,9 @@ An E-Paper display that displays messages from the internet
     // secrets.h
     #define SECRET_SSID "your wifi ssid"
     #define SECRET_PASS "your wifi password"
-    #define SHEET_ID "your spreadsheet id"
+    #define SECRET_PAGE_ID "your/gist/path"
     ```
-    where spreadsheet ID is taken from the url as
-    `https://docs.google.com/spreadsheets/d/your spreadsheet id/edit#gid=0`
+    where your/gist/path points to the raw view of the gist and will look something like `cbott/xxxxxxxx/raw`
 1. If you do not care about battery voltage sensing, update the `EPD_CS` define line in RemoteNote.ino to be 9 instead of 5
     - Assuming you want a nice battery percentage indicator, we need to modify the board a bit because the FeatherWing uses pin 9 (analog A7) for chip select, even though the Feather board uses that same pin for battery sensing.
     - Cut the jumper traces on the back of the FeatherWing labeled ECS and SDCS, and solder a jumper from the far side of ECS to the pin side of SDCS.
