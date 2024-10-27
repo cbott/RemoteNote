@@ -21,9 +21,9 @@ An E-Paper display that displays messages from the internet
     - Once again, [this](https://learn.adafruit.com/adafruit-feather-m0-wifi-atwinc1500/updating-ssl-certificates) tutorial
     - Make sure to add the `setPins()` line to the WiFi101 "FirmwareUpdater" example sketch
     - I had to use an older 1.8.x version of the Arduino IDE to get the updater tool to work
-1. Create a Google Sheets document and enable link sharing
-    - Place your message in the cells
-    - Fill in the last row with `#END` as the code will read up to that specific keyword
+1. Create a secret [gist](https://gist.github.com/) titled `Messages`
+    - Place your message in the file
+    - RemoteNote will read up to 100 characters or until the keyword `#END`, though only 80 printable characters will fit on the screen
 1. Create a file called `secrets.h` with the following definitions
     ```
     // secrets.h
@@ -31,7 +31,7 @@ An E-Paper display that displays messages from the internet
     #define SECRET_PASS "your wifi password"
     #define SECRET_PAGE_ID "your/gist/path"
     ```
-    where your/gist/path points to the raw view of the gist and will look something like `cbott/xxxxxxxx/raw`
+    where your/gist/path points to the raw view of the gist and will look something like `cbott/xxxxxxxx/raw/Messages`
 1. If you do not care about battery voltage sensing, update the `EPD_CS` define line in RemoteNote.ino to be 9 instead of 5
     - Assuming you want a nice battery percentage indicator, we need to modify the board a bit because the FeatherWing uses pin 9 (analog A7) for chip select, even though the Feather board uses that same pin for battery sensing.
     - Cut the jumper traces on the back of the FeatherWing labeled ECS and SDCS, and solder a jumper from the far side of ECS to the pin side of SDCS.
@@ -45,13 +45,13 @@ View the enclosure CAD model on [OnShape](https://cad.onshape.com/documents/76b6
 CAD models for boards provided by [Adafruit_CAD_Parts](https://github.com/adafruit/Adafruit_CAD_Parts) repository
 
 ## Message Formatting
-By default, messages will be displayed in black text on a white background.
+By default, messages will be displayed in black text on a white background. With configured font size the screen is 5 rows of 16 characters each.
 
-Messages may be prefixed with the string `[BG R]` or `[BG B]` to set the background color to be Red or Black. Following that with `[R]` or `[W]` will set the text color to either Red or White. These must be the first characters in the spreadsheet and will apply to the whole message.
+Messages may be prefixed with the string `[BG R]` or `[BG B]` to set the background color to be Red or Black. Following that with `[R]` or `[W]` will set the text color to either Red or White. These must be the first characters in the message and will apply to the whole message.
 - Example: `[BG B][W]Hello World` will display the message "Hello World" in white text on a black background.
 - Example: `[R]Hello World` will display the message "Hello World" in red text on a white background.
 
-The Adafruit display uses [CP437 encoding](https://en.wikipedia.org/wiki/Code_page_437) which, combined with HTTP responses modifying some formatting, can make it difficult to display special characters. Characters will need to be valid in both UTF8 and CP437 to make this work. Characters such as "<" will not display properly due to being escaped in the HTTP response.
+The Adafruit display uses [CP437 encoding](https://en.wikipedia.org/wiki/Code_page_437) which, combined with HTTP responses modifying some formatting, can make it difficult to display special characters. Characters will need to be valid in both UTF8 and CP437 to make this work. Characters such as "<" may not display properly due to being escaped in the HTTP response.
 
 
 ## Notes
